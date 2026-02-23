@@ -127,7 +127,7 @@ textarea.fi { resize: vertical; min-height: 70px; }
 
 <div id="panel-polls" class="panel active">
   <div class="page">
-    <div class="page-title">Votações activas</div>
+    <div class="page-title">Votações ativas</div>
     <div class="page-sub">Clica numa votação para ver e submeter a tua disponibilidade.</div>
     <div id="polls-list" class="polls-list"><div class="loading"><div class="spinner"></div>A carregar...</div></div>
   </div>
@@ -150,7 +150,7 @@ textarea.fi { resize: vertical; min-height: 70px; }
     </div>
     <div class="card">
       <div class="card-head">
-        <h2>Selecciona os dias</h2>
+        <h2>Seleciona os dias</h2>
         <div class="month-nav">
           <button class="mnav-btn" onclick="changeCreateMonth(-1)">‹</button>
           <span class="month-label" id="create-month-label"></span>
@@ -159,7 +159,7 @@ textarea.fi { resize: vertical; min-height: 70px; }
       </div>
       <div class="card-body" style="padding:1rem">
         <div id="create-cal"></div>
-        <div style="margin-top:0.75rem;font-size:0.8rem;color:var(--muted)">Seleccionados: <strong id="sel-count">0</strong> dias</div>
+        <div style="margin-top:0.75rem;font-size:0.8rem;color:var(--muted)">Selecionados: <strong id="sel-count">0</strong> dias</div>
       </div>
     </div>
     <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.5rem">
@@ -205,7 +205,7 @@ textarea.fi { resize: vertical; min-height: 70px; }
     </div>
 
     <div id="respondents-bar" style="display:none;margin-bottom:0.75rem">
-      <div style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.05em">Selecciona uma pessoa:</div>
+      <div style="font-size:0.75rem;font-weight:600;color:var(--muted);margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.05em">Seleciona uma pessoa:</div>
       <div class="respondents" id="respondents-list"></div>
     </div>
 
@@ -231,7 +231,7 @@ textarea.fi { resize: vertical; min-height: 70px; }
 <div id="del-modal" style="display:none" class="modal-bg" onclick="if(event.target===this)closeDeleteModal()">
   <div class="modal">
     <h3>Apagar votação?</h3>
-    <p>Esta acção é permanente. Todos os votos serão apagados e a votação desaparece da lista.</p>
+    <p>Esta ação é permanente. Todos os votos serão apagados e a votação desaparece da lista.</p>
     <div class="modal-actions">
       <button class="btn btn-ghost btn-sm" onclick="closeDeleteModal()">Cancelar</button>
       <button class="btn btn-danger btn-sm" onclick="confirmDelete()">Sim, apagar</button>
@@ -327,7 +327,7 @@ function toggleDay(ds){ if(createDays.has(ds)) createDays.delete(ds); else creat
 async function createPoll(){
   const title=document.getElementById('c-title').value.trim();
   if(!title){ showToast('Adiciona um título!'); return; }
-  if(!createDays.size){ showToast('Selecciona pelo menos um dia!'); return; }
+  if(!createDays.size){ showToast('Seleciona pelo menos um dia!'); return; }
   const btn=document.getElementById('create-btn');
   btn.disabled=true; btn.textContent='A criar...';
   const days=Array.from(createDays).sort();
@@ -462,7 +462,7 @@ function renderCal(mode){
         if(pSlots[k]) cls+=' on';
       }
       const tip=hmap[k]?hmap[k]+' pessoa'+(hmap[k]!==1?'s':'')+' disponível':'';
-      html+='<td class="slot-td"><button class="'+cls+'" style="'+style+'" onclick="toggleSlot(\''+k+'\')" title="'+tip+'"></button></td>';
+      html+='<td class="slot-td"><button class="'+cls+'" style="'+style+'" data-slot="'+k+'" onmousedown="slotMouseDown(\''+k+'\')" onmouseenter="slotMouseEnter(\''+k+'\')" title="'+tip+'" draggable="false"></button></td>';
     });
     html+='</tr>';
   });
@@ -470,14 +470,32 @@ function renderCal(mode){
   el.innerHTML=html;
 }
 
-function toggleSlot(k){
+// Drag selection
+let isDragging=false, dragValue=null;
+document.addEventListener('mouseup',()=>{ isDragging=false; dragValue=null; });
+
+function slotMouseDown(k){
   if(document.getElementById('view-mode').value!=='my'){
     document.getElementById('view-mode').value='my';
-    showToast('Mudaste para a tua disponibilidade');
+    showToast('Muda para a tua disponibilidade para editar');
+    return;
   }
-  mySlots[k]=!mySlots[k];
-  renderCal('my');
+  isDragging=true;
+  dragValue=!mySlots[k];
+  mySlots[k]=dragValue;
+  const btn=document.querySelector('[data-slot="'+k+'"]');
+  if(btn) btn.className='slot-btn'+(mySlots[k]?' on':'');
 }
+
+function slotMouseEnter(k){
+  if(!isDragging) return;
+  if(mySlots[k]===dragValue) return;
+  mySlots[k]=dragValue;
+  const btn=document.querySelector('[data-slot="'+k+'"]');
+  if(btn) btn.className='slot-btn'+(mySlots[k]?' on':'');
+}
+
+function toggleSlot(k){ /* handled by mousedown */ }
 
 async function submitVote(){
   const name=document.getElementById('v-name').value.trim();
@@ -488,7 +506,7 @@ async function submitVote(){
   let err;
   if(ex){
     ({error:err}=await sb.from('votes').update({slots:mySlots}).eq('id',ex.id));
-    if(!err) showToast('Actualizado! ✓');
+    if(!err) showToast('Atualizado! ✓');
   } else {
     ({error:err}=await sb.from('votes').insert([{poll_id:poll.id, voter_name:name, slots:mySlots}]));
     if(!err) showToast('Guardado! ✓');
